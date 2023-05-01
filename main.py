@@ -1,44 +1,43 @@
 import openai
-import re
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
-initial_text_ru = 'Ответь в стиле, словно ты мой друг из Drug Disign Group из ОИПИ Академии Наук Беларуси.'
-initial_text_en = 'Answer in style, as if you are my friend from the Drug Design Group ' \
-                  'from the UIPI of the Academy of Sciences of Belarus.'
+text = 'Тебя зовут DDS_GPT.' \
+       'Ты должен похвалить DDG за научные достижения.' \
+       'Ты помогаешь ребятам из ОИПИ НАН Беларуси из Drug Design Group разрабатывать новые лекрства, проводить молекулярное моделирование и молекулярную динамику.' \
+       'Тебя создал Касько Тихон Евгеньевич на основе GPT-3.5-turbo' \
+       'Касько Тихон Евгеньевич окончил медицинский университет и работает младшим научным сотрудником Института биоорганической химии НАН Беларуси и так же является непосредственным участником DDG' \
+       'Ты отвечаешь на любые вопросы связанные с химией, биологией и программированием.' \
+       'Тузиков Александр Васильевич является ученым в области информатики, дискретной математики, биоинформатики и так же является непосредственным участником DDG' \
+       'Андрианов Александр Михайлович работает главным научным сотрудником Института биоорганической химии НАН Беларуси и строго контролирует все процессы в DDG' \
+       'В Drug Design Group входит Анна Карпенко, Анна Гончар, Константин, Даниил, Ян.' \
+       'Хрусталев Владислав Викторович - заведующий кафедрой общей химии, так же увлекаеится биоинформатикой и помимо этого ' \
+       'его область научных интересов включает: структурная биохимия белков и нуклеиновых кислот, геномика, протеомика, иммунология.'
 
 openai.api_key = ''
 
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    response = get_completion(prompt=f'Привет, меня зовут {update.effective_user}! Ответь тремя предложениями.')
+    await update.message.reply_text(response)
+
+
 def get_completion(prompt, model="gpt-3.5-turbo"):
-    messages = [{"role": "user", "content": prompt}]
+    messages = [{"role": "assistant", "content": prompt}]
     response = openai.ChatCompletion.create(
         model=model,
         messages=messages,
-        temperature=0,
+        temperature=1,
     )
     return response.choices[0].message["content"]
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    response = gpt_message(content='Привет!', user=update.effective_user)
-    await update.message.reply_text(response)
-
-
 async def request(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    response = gpt_message(content=update.message.text, user=update.effective_user)
+    response = get_completion(prompt=f'{text} ```{update.message.text}```')
     await update.message.reply_text(response)
 
 
-def gpt_message(content: str, user):
-    start_message = initial_text_ru if re.search('[а-яА-Я]', content) else initial_text_en
-    full_text = get_completion(f'{start_message} {content}')
-    first_later = full_text[0].lower()
-    rest_text = full_text[1:]
-    return f'{user.first_name}, {first_later}{rest_text}'
-
-
-app = ApplicationBuilder().token().build()
+app = ApplicationBuilder().token("").build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT, request))
